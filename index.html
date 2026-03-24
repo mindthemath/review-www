@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Screenshot Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1117;
+      --panel: #171b25;
+      --panel-2: #1f2532;
+      --border: #2c3547;
+      --text: #ecf2ff;
+      --muted: #9baccc;
+      --accent: #88b4ff;
+      --missing: #74809a;
+      --shadow: rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(15, 17, 23, 0.92);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 16px 40px var(--shadow);
+    }
+
+    .title {
+      display: grid;
+      gap: 4px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .subtitle,
+    .stats {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 10px 14px;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button.active {
+      border-color: var(--accent);
+      background: var(--panel-2);
+      color: #ffffff;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: 0 16px 40px var(--shadow);
+    }
+
+    table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: rgba(23, 27, 37, 0.97);
+    }
+
+    tbody th {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: rgba(23, 27, 37, 0.97);
+    }
+
+    th,
+    td {
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 12px;
+      vertical-align: top;
+    }
+
+    thead th:first-child {
+      left: 0;
+      z-index: 4;
+    }
+
+    tr:first-child th,
+    tr:first-child td {
+      border-top: 0;
+    }
+
+    th:first-child,
+    td:first-child {
+      border-left: 0;
+    }
+
+    .axis {
+      min-width: 200px;
+      max-width: 200px;
+      text-align: left;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .axis small,
+    .header small {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .header {
+      min-width: 240px;
+      text-align: left;
+    }
+
+    .cell {
+      display: grid;
+      gap: 8px;
+      width: 240px;
+    }
+
+    .thumb-link {
+      display: block;
+      width: fit-content;
+      max-width: 100%;
+      text-decoration: none;
+    }
+
+    img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background:
+        linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.04) 75%, rgba(255,255,255,0.04)),
+        linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.04) 75%, rgba(255,255,255,0.04));
+      background-position: 0 0, 10px 10px;
+      background-size: 20px 20px;
+    }
+
+    .meta {
+      display: grid;
+      gap: 2px;
+      font-size: 13px;
+    }
+
+    .meta .muted,
+    .missing {
+      color: var(--muted);
+    }
+
+    .missing {
+      width: 240px;
+      min-height: 180px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 12px;
+      }
+
+      .toolbar {
+        padding: 12px;
+      }
+
+      .axis {
+        min-width: 160px;
+      }
+
+      .header,
+      .cell,
+      .missing {
+        width: 180px;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .toolbar {
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 10px;
+      }
+
+      h1 {
+        font-size: 16px;
+      }
+
+      .subtitle,
+      .stats {
+        font-size: 12px;
+      }
+
+      button {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .axis {
+        min-width: 100px;
+        max-width: 100px;
+        font-size: 0.8em;
+      }
+
+      .header,
+      .cell,
+      .missing {
+        width: 140px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="toolbar">
+      <div class="title">
+        <h1>Website Preview</h1>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div class="controls" aria-label="Group screenshots">
+        <button type="button" data-group="folder">Group by page</button>
+        <button type="button" data-group="resolution">Group by resolution</button>
+      </div>
+    </section>
+
+    <section class="table-wrap">
+      <table>
+        <thead id="table-head"></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    const data = {"generatedAt":"2026-03-24T01:52:31.504Z","folderCount":6,"screenshotCount":78,"folders":[{"key":"root-load","title":"Root Load"},{"key":"root-wait","title":"Root Wait"},{"key":"about","title":"About"},{"key":"contact","title":"Contact"},{"key":"research","title":"Research"},{"key":"work","title":"Work"}],"resolutions":[{"key":"375x667-iphone-se","width":375,"height":667,"label":"iphone-se","title":"iphone-se"},{"key":"390x844-iphone-12-13","width":390,"height":844,"label":"iphone-12-13","title":"iphone-12-13"},{"key":"430x932-iphone-14-15-16-17-pro-max","width":430,"height":932,"label":"iphone-14-15-16-17-pro-max","title":"iphone-14-15-16-17-pro-max"},{"key":"667x375-iphone-se-landscape","width":667,"height":375,"label":"iphone-se-landscape","title":"iphone-se-landscape"},{"key":"844x390-iphone-12-13-landscape","width":844,"height":390,"label":"iphone-12-13-landscape","title":"iphone-12-13-landscape"},{"key":"932x430-iphone-14-15-16-17-pro-max-landscape","width":932,"height":430,"label":"iphone-14-15-16-17-pro-max-landscape","title":"iphone-14-15-16-17-pro-max-landscape"},{"key":"768x1024-ipad-portrait","width":768,"height":1024,"label":"ipad-portrait","title":"ipad-portrait"},{"key":"1024x768-ipad-landscape","width":1024,"height":768,"label":"ipad-landscape","title":"ipad-landscape"},{"key":"1280x720-desktop-1280x720","width":1280,"height":720,"label":"desktop-1280x720","title":"desktop-1280x720"},{"key":"1366x768-desktop-1366x768","width":1366,"height":768,"label":"desktop-1366x768","title":"desktop-1366x768"},{"key":"1440x900-desktop-1440x900","width":1440,"height":900,"label":"desktop-1440x900","title":"desktop-1440x900"},{"key":"1920x1080-desktop-1920x1080","width":1920,"height":1080,"label":"desktop-1920x1080","title":"desktop-1920x1080"},{"key":"2560x1440-desktop-2560x1440","width":2560,"height":1440,"label":"desktop-2560x1440","title":"desktop-2560x1440"}],"screenshots":[{"id":"root-load:375x667-iphone-se","folder":"root-load","folderTitle":"Root Load","resolutionKey":"375x667-iphone-se","resolutionTitle":"iphone-se","width":375,"height":667,"label":"iphone-se","relativePath":"./root-load/375x667-iphone-se.png"},{"id":"root-load:390x844-iphone-12-13","folder":"root-load","folderTitle":"Root Load","resolutionKey":"390x844-iphone-12-13","resolutionTitle":"iphone-12-13","width":390,"height":844,"label":"iphone-12-13","relativePath":"./root-load/390x844-iphone-12-13.png"},{"id":"root-load:430x932-iphone-14-15-16-17-pro-max","folder":"root-load","folderTitle":"Root Load","resolutionKey":"430x932-iphone-14-15-16-17-pro-max","resolutionTitle":"iphone-14-15-16-17-pro-max","width":430,"height":932,"label":"iphone-14-15-16-17-pro-max","relativePath":"./root-load/430x932-iphone-14-15-16-17-pro-max.png"},{"id":"root-load:667x375-iphone-se-landscape","folder":"root-load","folderTitle":"Root Load","resolutionKey":"667x375-iphone-se-landscape","resolutionTitle":"iphone-se-landscape","width":667,"height":375,"label":"iphone-se-landscape","relativePath":"./root-load/667x375-iphone-se-landscape.png"},{"id":"root-load:768x1024-ipad-portrait","folder":"root-load","folderTitle":"Root Load","resolutionKey":"768x1024-ipad-portrait","resolutionTitle":"ipad-portrait","width":768,"height":1024,"label":"ipad-portrait","relativePath":"./root-load/768x1024-ipad-portrait.png"},{"id":"root-load:844x390-iphone-12-13-landscape","folder":"root-load","folderTitle":"Root Load","resolutionKey":"844x390-iphone-12-13-landscape","resolutionTitle":"iphone-12-13-landscape","width":844,"height":390,"label":"iphone-12-13-landscape","relativePath":"./root-load/844x390-iphone-12-13-landscape.png"},{"id":"root-load:932x430-iphone-14-15-16-17-pro-max-landscape","folder":"root-load","folderTitle":"Root Load","resolutionKey":"932x430-iphone-14-15-16-17-pro-max-landscape","resolutionTitle":"iphone-14-15-16-17-pro-max-landscape","width":932,"height":430,"label":"iphone-14-15-16-17-pro-max-landscape","relativePath":"./root-load/932x430-iphone-14-15-16-17-pro-max-landscape.png"},{"id":"root-load:1024x768-ipad-landscape","folder":"root-load","folderTitle":"Root Load","resolutionKey":"1024x768-ipad-landscape","resolutionTitle":"ipad-landscape","width":1024,"height":768,"label":"ipad-landscape","relativePath":"./root-load/1024x768-ipad-landscape.png"},{"id":"root-load:1280x720-desktop-1280x720","folder":"root-load","folderTitle":"Root Load","resolutionKey":"1280x720-desktop-1280x720","resolutionTitle":"desktop-1280x720","width":1280,"height":720,"label":"desktop-1280x720","relativePath":"./root-load/1280x720-desktop-1280x720.png"},{"id":"root-load:1366x768-desktop-1366x768","folder":"root-load","folderTitle":"Root Load","resolutionKey":"1366x768-desktop-1366x768","resolutionTitle":"desktop-1366x768","width":1366,"height":768,"label":"desktop-1366x768","relativePath":"./root-load/1366x768-desktop-1366x768.png"},{"id":"root-load:1440x900-desktop-1440x900","folder":"root-load","folderTitle":"Root Load","resolutionKey":"1440x900-desktop-1440x900","resolutionTitle":"desktop-1440x900","width":1440,"height":900,"label":"desktop-1440x900","relativePath":"./root-load/1440x900-desktop-1440x900.png"},{"id":"root-load:1920x1080-desktop-1920x1080","folder":"root-load","folderTitle":"Root Load","resolutionKey":"1920x1080-desktop-1920x1080","resolutionTitle":"desktop-1920x1080","width":1920,"height":1080,"label":"desktop-1920x1080","relativePath":"./root-load/1920x1080-desktop-1920x1080.png"},{"id":"root-load:2560x1440-desktop-2560x1440","folder":"root-load","folderTitle":"Root Load","resolutionKey":"2560x1440-desktop-2560x1440","resolutionTitle":"desktop-2560x1440","width":2560,"height":1440,"label":"desktop-2560x1440","relativePath":"./root-load/2560x1440-desktop-2560x1440.png"},{"id":"root-wait:375x667-iphone-se","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"375x667-iphone-se","resolutionTitle":"iphone-se","width":375,"height":667,"label":"iphone-se","relativePath":"./root-wait/375x667-iphone-se.png"},{"id":"root-wait:390x844-iphone-12-13","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"390x844-iphone-12-13","resolutionTitle":"iphone-12-13","width":390,"height":844,"label":"iphone-12-13","relativePath":"./root-wait/390x844-iphone-12-13.png"},{"id":"root-wait:430x932-iphone-14-15-16-17-pro-max","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"430x932-iphone-14-15-16-17-pro-max","resolutionTitle":"iphone-14-15-16-17-pro-max","width":430,"height":932,"label":"iphone-14-15-16-17-pro-max","relativePath":"./root-wait/430x932-iphone-14-15-16-17-pro-max.png"},{"id":"root-wait:667x375-iphone-se-landscape","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"667x375-iphone-se-landscape","resolutionTitle":"iphone-se-landscape","width":667,"height":375,"label":"iphone-se-landscape","relativePath":"./root-wait/667x375-iphone-se-landscape.png"},{"id":"root-wait:768x1024-ipad-portrait","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"768x1024-ipad-portrait","resolutionTitle":"ipad-portrait","width":768,"height":1024,"label":"ipad-portrait","relativePath":"./root-wait/768x1024-ipad-portrait.png"},{"id":"root-wait:844x390-iphone-12-13-landscape","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"844x390-iphone-12-13-landscape","resolutionTitle":"iphone-12-13-landscape","width":844,"height":390,"label":"iphone-12-13-landscape","relativePath":"./root-wait/844x390-iphone-12-13-landscape.png"},{"id":"root-wait:932x430-iphone-14-15-16-17-pro-max-landscape","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"932x430-iphone-14-15-16-17-pro-max-landscape","resolutionTitle":"iphone-14-15-16-17-pro-max-landscape","width":932,"height":430,"label":"iphone-14-15-16-17-pro-max-landscape","relativePath":"./root-wait/932x430-iphone-14-15-16-17-pro-max-landscape.png"},{"id":"root-wait:1024x768-ipad-landscape","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"1024x768-ipad-landscape","resolutionTitle":"ipad-landscape","width":1024,"height":768,"label":"ipad-landscape","relativePath":"./root-wait/1024x768-ipad-landscape.png"},{"id":"root-wait:1280x720-desktop-1280x720","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"1280x720-desktop-1280x720","resolutionTitle":"desktop-1280x720","width":1280,"height":720,"label":"desktop-1280x720","relativePath":"./root-wait/1280x720-desktop-1280x720.png"},{"id":"root-wait:1366x768-desktop-1366x768","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"1366x768-desktop-1366x768","resolutionTitle":"desktop-1366x768","width":1366,"height":768,"label":"desktop-1366x768","relativePath":"./root-wait/1366x768-desktop-1366x768.png"},{"id":"root-wait:1440x900-desktop-1440x900","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"1440x900-desktop-1440x900","resolutionTitle":"desktop-1440x900","width":1440,"height":900,"label":"desktop-1440x900","relativePath":"./root-wait/1440x900-desktop-1440x900.png"},{"id":"root-wait:1920x1080-desktop-1920x1080","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"1920x1080-desktop-1920x1080","resolutionTitle":"desktop-1920x1080","width":1920,"height":1080,"label":"desktop-1920x1080","relativePath":"./root-wait/1920x1080-desktop-1920x1080.png"},{"id":"root-wait:2560x1440-desktop-2560x1440","folder":"root-wait","folderTitle":"Root Wait","resolutionKey":"2560x1440-desktop-2560x1440","resolutionTitle":"desktop-2560x1440","width":2560,"height":1440,"label":"desktop-2560x1440","relativePath":"./root-wait/2560x1440-desktop-2560x1440.png"},{"id":"about:375x667-iphone-se","folder":"about","folderTitle":"About","resolutionKey":"375x667-iphone-se","resolutionTitle":"iphone-se","width":375,"height":667,"label":"iphone-se","relativePath":"./about/375x667-iphone-se.png"},{"id":"about:390x844-iphone-12-13","folder":"about","folderTitle":"About","resolutionKey":"390x844-iphone-12-13","resolutionTitle":"iphone-12-13","width":390,"height":844,"label":"iphone-12-13","relativePath":"./about/390x844-iphone-12-13.png"},{"id":"about:430x932-iphone-14-15-16-17-pro-max","folder":"about","folderTitle":"About","resolutionKey":"430x932-iphone-14-15-16-17-pro-max","resolutionTitle":"iphone-14-15-16-17-pro-max","width":430,"height":932,"label":"iphone-14-15-16-17-pro-max","relativePath":"./about/430x932-iphone-14-15-16-17-pro-max.png"},{"id":"about:667x375-iphone-se-landscape","folder":"about","folderTitle":"About","resolutionKey":"667x375-iphone-se-landscape","resolutionTitle":"iphone-se-landscape","width":667,"height":375,"label":"iphone-se-landscape","relativePath":"./about/667x375-iphone-se-landscape.png"},{"id":"about:768x1024-ipad-portrait","folder":"about","folderTitle":"About","resolutionKey":"768x1024-ipad-portrait","resolutionTitle":"ipad-portrait","width":768,"height":1024,"label":"ipad-portrait","relativePath":"./about/768x1024-ipad-portrait.png"},{"id":"about:844x390-iphone-12-13-landscape","folder":"about","folderTitle":"About","resolutionKey":"844x390-iphone-12-13-landscape","resolutionTitle":"iphone-12-13-landscape","width":844,"height":390,"label":"iphone-12-13-landscape","relativePath":"./about/844x390-iphone-12-13-landscape.png"},{"id":"about:932x430-iphone-14-15-16-17-pro-max-landscape","folder":"about","folderTitle":"About","resolutionKey":"932x430-iphone-14-15-16-17-pro-max-landscape","resolutionTitle":"iphone-14-15-16-17-pro-max-landscape","width":932,"height":430,"label":"iphone-14-15-16-17-pro-max-landscape","relativePath":"./about/932x430-iphone-14-15-16-17-pro-max-landscape.png"},{"id":"about:1024x768-ipad-landscape","folder":"about","folderTitle":"About","resolutionKey":"1024x768-ipad-landscape","resolutionTitle":"ipad-landscape","width":1024,"height":768,"label":"ipad-landscape","relativePath":"./about/1024x768-ipad-landscape.png"},{"id":"about:1280x720-desktop-1280x720","folder":"about","folderTitle":"About","resolutionKey":"1280x720-desktop-1280x720","resolutionTitle":"desktop-1280x720","width":1280,"height":720,"label":"desktop-1280x720","relativePath":"./about/1280x720-desktop-1280x720.png"},{"id":"about:1366x768-desktop-1366x768","folder":"about","folderTitle":"About","resolutionKey":"1366x768-desktop-1366x768","resolutionTitle":"desktop-1366x768","width":1366,"height":768,"label":"desktop-1366x768","relativePath":"./about/1366x768-desktop-1366x768.png"},{"id":"about:1440x900-desktop-1440x900","folder":"about","folderTitle":"About","resolutionKey":"1440x900-desktop-1440x900","resolutionTitle":"desktop-1440x900","width":1440,"height":900,"label":"desktop-1440x900","relativePath":"./about/1440x900-desktop-1440x900.png"},{"id":"about:1920x1080-desktop-1920x1080","folder":"about","folderTitle":"About","resolutionKey":"1920x1080-desktop-1920x1080","resolutionTitle":"desktop-1920x1080","width":1920,"height":1080,"label":"desktop-1920x1080","relativePath":"./about/1920x1080-desktop-1920x1080.png"},{"id":"about:2560x1440-desktop-2560x1440","folder":"about","folderTitle":"About","resolutionKey":"2560x1440-desktop-2560x1440","resolutionTitle":"desktop-2560x1440","width":2560,"height":1440,"label":"desktop-2560x1440","relativePath":"./about/2560x1440-desktop-2560x1440.png"},{"id":"contact:375x667-iphone-se","folder":"contact","folderTitle":"Contact","resolutionKey":"375x667-iphone-se","resolutionTitle":"iphone-se","width":375,"height":667,"label":"iphone-se","relativePath":"./contact/375x667-iphone-se.png"},{"id":"contact:390x844-iphone-12-13","folder":"contact","folderTitle":"Contact","resolutionKey":"390x844-iphone-12-13","resolutionTitle":"iphone-12-13","width":390,"height":844,"label":"iphone-12-13","relativePath":"./contact/390x844-iphone-12-13.png"},{"id":"contact:430x932-iphone-14-15-16-17-pro-max","folder":"contact","folderTitle":"Contact","resolutionKey":"430x932-iphone-14-15-16-17-pro-max","resolutionTitle":"iphone-14-15-16-17-pro-max","width":430,"height":932,"label":"iphone-14-15-16-17-pro-max","relativePath":"./contact/430x932-iphone-14-15-16-17-pro-max.png"},{"id":"contact:667x375-iphone-se-landscape","folder":"contact","folderTitle":"Contact","resolutionKey":"667x375-iphone-se-landscape","resolutionTitle":"iphone-se-landscape","width":667,"height":375,"label":"iphone-se-landscape","relativePath":"./contact/667x375-iphone-se-landscape.png"},{"id":"contact:768x1024-ipad-portrait","folder":"contact","folderTitle":"Contact","resolutionKey":"768x1024-ipad-portrait","resolutionTitle":"ipad-portrait","width":768,"height":1024,"label":"ipad-portrait","relativePath":"./contact/768x1024-ipad-portrait.png"},{"id":"contact:844x390-iphone-12-13-landscape","folder":"contact","folderTitle":"Contact","resolutionKey":"844x390-iphone-12-13-landscape","resolutionTitle":"iphone-12-13-landscape","width":844,"height":390,"label":"iphone-12-13-landscape","relativePath":"./contact/844x390-iphone-12-13-landscape.png"},{"id":"contact:932x430-iphone-14-15-16-17-pro-max-landscape","folder":"contact","folderTitle":"Contact","resolutionKey":"932x430-iphone-14-15-16-17-pro-max-landscape","resolutionTitle":"iphone-14-15-16-17-pro-max-landscape","width":932,"height":430,"label":"iphone-14-15-16-17-pro-max-landscape","relativePath":"./contact/932x430-iphone-14-15-16-17-pro-max-landscape.png"},{"id":"contact:1024x768-ipad-landscape","folder":"contact","folderTitle":"Contact","resolutionKey":"1024x768-ipad-landscape","resolutionTitle":"ipad-landscape","width":1024,"height":768,"label":"ipad-landscape","relativePath":"./contact/1024x768-ipad-landscape.png"},{"id":"contact:1280x720-desktop-1280x720","folder":"contact","folderTitle":"Contact","resolutionKey":"1280x720-desktop-1280x720","resolutionTitle":"desktop-1280x720","width":1280,"height":720,"label":"desktop-1280x720","relativePath":"./contact/1280x720-desktop-1280x720.png"},{"id":"contact:1366x768-desktop-1366x768","folder":"contact","folderTitle":"Contact","resolutionKey":"1366x768-desktop-1366x768","resolutionTitle":"desktop-1366x768","width":1366,"height":768,"label":"desktop-1366x768","relativePath":"./contact/1366x768-desktop-1366x768.png"},{"id":"contact:1440x900-desktop-1440x900","folder":"contact","folderTitle":"Contact","resolutionKey":"1440x900-desktop-1440x900","resolutionTitle":"desktop-1440x900","width":1440,"height":900,"label":"desktop-1440x900","relativePath":"./contact/1440x900-desktop-1440x900.png"},{"id":"contact:1920x1080-desktop-1920x1080","folder":"contact","folderTitle":"Contact","resolutionKey":"1920x1080-desktop-1920x1080","resolutionTitle":"desktop-1920x1080","width":1920,"height":1080,"label":"desktop-1920x1080","relativePath":"./contact/1920x1080-desktop-1920x1080.png"},{"id":"contact:2560x1440-desktop-2560x1440","folder":"contact","folderTitle":"Contact","resolutionKey":"2560x1440-desktop-2560x1440","resolutionTitle":"desktop-2560x1440","width":2560,"height":1440,"label":"desktop-2560x1440","relativePath":"./contact/2560x1440-desktop-2560x1440.png"},{"id":"research:375x667-iphone-se","folder":"research","folderTitle":"Research","resolutionKey":"375x667-iphone-se","resolutionTitle":"iphone-se","width":375,"height":667,"label":"iphone-se","relativePath":"./research/375x667-iphone-se.png"},{"id":"research:390x844-iphone-12-13","folder":"research","folderTitle":"Research","resolutionKey":"390x844-iphone-12-13","resolutionTitle":"iphone-12-13","width":390,"height":844,"label":"iphone-12-13","relativePath":"./research/390x844-iphone-12-13.png"},{"id":"research:430x932-iphone-14-15-16-17-pro-max","folder":"research","folderTitle":"Research","resolutionKey":"430x932-iphone-14-15-16-17-pro-max","resolutionTitle":"iphone-14-15-16-17-pro-max","width":430,"height":932,"label":"iphone-14-15-16-17-pro-max","relativePath":"./research/430x932-iphone-14-15-16-17-pro-max.png"},{"id":"research:667x375-iphone-se-landscape","folder":"research","folderTitle":"Research","resolutionKey":"667x375-iphone-se-landscape","resolutionTitle":"iphone-se-landscape","width":667,"height":375,"label":"iphone-se-landscape","relativePath":"./research/667x375-iphone-se-landscape.png"},{"id":"research:768x1024-ipad-portrait","folder":"research","folderTitle":"Research","resolutionKey":"768x1024-ipad-portrait","resolutionTitle":"ipad-portrait","width":768,"height":1024,"label":"ipad-portrait","relativePath":"./research/768x1024-ipad-portrait.png"},{"id":"research:844x390-iphone-12-13-landscape","folder":"research","folderTitle":"Research","resolutionKey":"844x390-iphone-12-13-landscape","resolutionTitle":"iphone-12-13-landscape","width":844,"height":390,"label":"iphone-12-13-landscape","relativePath":"./research/844x390-iphone-12-13-landscape.png"},{"id":"research:932x430-iphone-14-15-16-17-pro-max-landscape","folder":"research","folderTitle":"Research","resolutionKey":"932x430-iphone-14-15-16-17-pro-max-landscape","resolutionTitle":"iphone-14-15-16-17-pro-max-landscape","width":932,"height":430,"label":"iphone-14-15-16-17-pro-max-landscape","relativePath":"./research/932x430-iphone-14-15-16-17-pro-max-landscape.png"},{"id":"research:1024x768-ipad-landscape","folder":"research","folderTitle":"Research","resolutionKey":"1024x768-ipad-landscape","resolutionTitle":"ipad-landscape","width":1024,"height":768,"label":"ipad-landscape","relativePath":"./research/1024x768-ipad-landscape.png"},{"id":"research:1280x720-desktop-1280x720","folder":"research","folderTitle":"Research","resolutionKey":"1280x720-desktop-1280x720","resolutionTitle":"desktop-1280x720","width":1280,"height":720,"label":"desktop-1280x720","relativePath":"./research/1280x720-desktop-1280x720.png"},{"id":"research:1366x768-desktop-1366x768","folder":"research","folderTitle":"Research","resolutionKey":"1366x768-desktop-1366x768","resolutionTitle":"desktop-1366x768","width":1366,"height":768,"label":"desktop-1366x768","relativePath":"./research/1366x768-desktop-1366x768.png"},{"id":"research:1440x900-desktop-1440x900","folder":"research","folderTitle":"Research","resolutionKey":"1440x900-desktop-1440x900","resolutionTitle":"desktop-1440x900","width":1440,"height":900,"label":"desktop-1440x900","relativePath":"./research/1440x900-desktop-1440x900.png"},{"id":"research:1920x1080-desktop-1920x1080","folder":"research","folderTitle":"Research","resolutionKey":"1920x1080-desktop-1920x1080","resolutionTitle":"desktop-1920x1080","width":1920,"height":1080,"label":"desktop-1920x1080","relativePath":"./research/1920x1080-desktop-1920x1080.png"},{"id":"research:2560x1440-desktop-2560x1440","folder":"research","folderTitle":"Research","resolutionKey":"2560x1440-desktop-2560x1440","resolutionTitle":"desktop-2560x1440","width":2560,"height":1440,"label":"desktop-2560x1440","relativePath":"./research/2560x1440-desktop-2560x1440.png"},{"id":"work:375x667-iphone-se","folder":"work","folderTitle":"Work","resolutionKey":"375x667-iphone-se","resolutionTitle":"iphone-se","width":375,"height":667,"label":"iphone-se","relativePath":"./work/375x667-iphone-se.png"},{"id":"work:390x844-iphone-12-13","folder":"work","folderTitle":"Work","resolutionKey":"390x844-iphone-12-13","resolutionTitle":"iphone-12-13","width":390,"height":844,"label":"iphone-12-13","relativePath":"./work/390x844-iphone-12-13.png"},{"id":"work:430x932-iphone-14-15-16-17-pro-max","folder":"work","folderTitle":"Work","resolutionKey":"430x932-iphone-14-15-16-17-pro-max","resolutionTitle":"iphone-14-15-16-17-pro-max","width":430,"height":932,"label":"iphone-14-15-16-17-pro-max","relativePath":"./work/430x932-iphone-14-15-16-17-pro-max.png"},{"id":"work:667x375-iphone-se-landscape","folder":"work","folderTitle":"Work","resolutionKey":"667x375-iphone-se-landscape","resolutionTitle":"iphone-se-landscape","width":667,"height":375,"label":"iphone-se-landscape","relativePath":"./work/667x375-iphone-se-landscape.png"},{"id":"work:768x1024-ipad-portrait","folder":"work","folderTitle":"Work","resolutionKey":"768x1024-ipad-portrait","resolutionTitle":"ipad-portrait","width":768,"height":1024,"label":"ipad-portrait","relativePath":"./work/768x1024-ipad-portrait.png"},{"id":"work:844x390-iphone-12-13-landscape","folder":"work","folderTitle":"Work","resolutionKey":"844x390-iphone-12-13-landscape","resolutionTitle":"iphone-12-13-landscape","width":844,"height":390,"label":"iphone-12-13-landscape","relativePath":"./work/844x390-iphone-12-13-landscape.png"},{"id":"work:932x430-iphone-14-15-16-17-pro-max-landscape","folder":"work","folderTitle":"Work","resolutionKey":"932x430-iphone-14-15-16-17-pro-max-landscape","resolutionTitle":"iphone-14-15-16-17-pro-max-landscape","width":932,"height":430,"label":"iphone-14-15-16-17-pro-max-landscape","relativePath":"./work/932x430-iphone-14-15-16-17-pro-max-landscape.png"},{"id":"work:1024x768-ipad-landscape","folder":"work","folderTitle":"Work","resolutionKey":"1024x768-ipad-landscape","resolutionTitle":"ipad-landscape","width":1024,"height":768,"label":"ipad-landscape","relativePath":"./work/1024x768-ipad-landscape.png"},{"id":"work:1280x720-desktop-1280x720","folder":"work","folderTitle":"Work","resolutionKey":"1280x720-desktop-1280x720","resolutionTitle":"desktop-1280x720","width":1280,"height":720,"label":"desktop-1280x720","relativePath":"./work/1280x720-desktop-1280x720.png"},{"id":"work:1366x768-desktop-1366x768","folder":"work","folderTitle":"Work","resolutionKey":"1366x768-desktop-1366x768","resolutionTitle":"desktop-1366x768","width":1366,"height":768,"label":"desktop-1366x768","relativePath":"./work/1366x768-desktop-1366x768.png"},{"id":"work:1440x900-desktop-1440x900","folder":"work","folderTitle":"Work","resolutionKey":"1440x900-desktop-1440x900","resolutionTitle":"desktop-1440x900","width":1440,"height":900,"label":"desktop-1440x900","relativePath":"./work/1440x900-desktop-1440x900.png"},{"id":"work:1920x1080-desktop-1920x1080","folder":"work","folderTitle":"Work","resolutionKey":"1920x1080-desktop-1920x1080","resolutionTitle":"desktop-1920x1080","width":1920,"height":1080,"label":"desktop-1920x1080","relativePath":"./work/1920x1080-desktop-1920x1080.png"},{"id":"work:2560x1440-desktop-2560x1440","folder":"work","folderTitle":"Work","resolutionKey":"2560x1440-desktop-2560x1440","resolutionTitle":"desktop-2560x1440","width":2560,"height":1440,"label":"desktop-2560x1440","relativePath":"./work/2560x1440-desktop-2560x1440.png"}]};
+    const state = { groupBy: 'resolution' };
+    const cacheBustSeed = Date.now();
+    const head = document.getElementById('table-head');
+    const body = document.getElementById('table-body');
+    const stats = document.getElementById('stats');
+    const buttons = Array.from(document.querySelectorAll('[data-group]'));
+    const screenshotMap = new Map(data.screenshots.map((item) => [item.id, item]));
+
+    function cacheBustedPath(relativePath, index) {
+      return relativePath + '?ts=' + cacheBustSeed + '-' + index;
+    }
+
+    function getColumns() {
+      return state.groupBy === 'folder' ? data.resolutions : data.folders;
+    }
+
+    function getRows() {
+      return state.groupBy === 'folder' ? data.folders : data.resolutions;
+    }
+
+    function getRowTitle(row) {
+      return row.title;
+    }
+
+    function getColumnTitle(column) {
+      return column.title;
+    }
+
+    function lookupItem(row, column) {
+      if (state.groupBy === 'folder') {
+        return screenshotMap.get(row.key + ':' + column.key);
+      }
+
+      return screenshotMap.get(column.key + ':' + row.key);
+    }
+
+    function renderHeader(columns) {
+      const axisLabel = state.groupBy === 'folder' ? 'Page' : 'Resolution';
+      const columnLabel = state.groupBy === 'folder' ? 'Resolutions' : 'Pages';
+      const headerCells = columns.map((column) => {
+        const detail = state.groupBy === 'folder'
+          ? column.width + ' x ' + column.height
+          : '';
+        return '<th class="header">' + getColumnTitle(column) + (detail ? '<small>' + detail + '</small>' : '') + '</th>';
+      }).join('');
+
+      head.innerHTML = '<tr><th class="axis">' + axisLabel + '<small>' + columnLabel + '</small></th>' + headerCells + '</tr>';
+    }
+
+    function renderRows(rows, columns) {
+      let imageIndex = 0;
+
+      body.innerHTML = rows.map((row) => {
+        const detail = state.groupBy === 'folder'
+          ? row.key
+          : row.width + ' x ' + row.height;
+
+        const cells = columns.map((column) => {
+          const item = lookupItem(row, column);
+          if (!item) {
+            return '<td><div class="missing">No screenshot</div></td>';
+          }
+
+          imageIndex += 1;
+          const bustedPath = cacheBustedPath(item.relativePath, imageIndex);
+          return [
+            '<td>',
+            '  <div class="cell">',
+            '    <a class="thumb-link" href="' + bustedPath + '" target="_blank" rel="noreferrer">',
+            '      <img loading="lazy" src="' + bustedPath + '" alt="' + item.folderTitle + ' at ' + item.resolutionTitle + '">',
+            '    </a>',
+            '    <div class="meta">',
+            '      <strong>' + item.folderTitle + '</strong>',
+            '      <span class="muted">' + item.width + ' x ' + item.height + ' · ' + item.label + '</span>',
+            '    </div>',
+            '  </div>',
+            '</td>',
+          ].join('');
+        }).join('');
+
+        return '<tr><th class="axis">' + getRowTitle(row) + '<small>' + detail + '</small></th>' + cells + '</tr>';
+      }).join('');
+    }
+
+    function renderStats() {
+      stats.textContent = data.folderCount + ' pages, ' + data.resolutions.length + ' resolutions, ' + data.screenshotCount + ' screenshots. Generated ' + data.generatedAt + '.';
+    }
+
+    function render() {
+      const columns = getColumns();
+      const rows = getRows();
+
+      buttons.forEach((button) => {
+        button.classList.toggle('active', button.dataset.group === state.groupBy);
+      });
+
+      renderHeader(columns);
+      renderRows(rows, columns);
+      renderStats();
+    }
+
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        state.groupBy = button.dataset.group;
+        render();
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>
